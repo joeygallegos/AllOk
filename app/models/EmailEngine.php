@@ -172,7 +172,7 @@ class EmailEngine {
 		$html = $parameters['html'];
 
 		if (!isset($parameters['from'])) {
-			$parameters['from'] = $this->fromEmail;
+			$parameters['from'] = getenv('ADMINTOOLS_FROM');
 		}
 
 		$response = false;

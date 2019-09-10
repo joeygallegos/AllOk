@@ -3,6 +3,8 @@ use Carbon\Carbon;
 use Monolog\Logger;
 use \Slim\App as App;
 use App\Models\EmailEngine;
+use App\Models\TextingEngine;
+use App\Console\Commands\TestText;
 use Monolog\Handler\StreamHandler;
 use Monolog\Formatter\LineFormatter;
 use \SecurityLib\Strength as Strength;
@@ -18,6 +20,8 @@ session_start();
 // environment settings
 $slimSettings = [];
 $slimSettings['addContentLengthHeader'] = false;
+$slimSettings['displayErrorDetails'] = false;
+$slimSettings['debug'] = false;
 
 // create the application
 $app = new App([
@@ -25,23 +29,15 @@ $app = new App([
 ]);
 $container = $app->getContainer();
 
-// setup CLI console
-$container['console'] = function() {
-	$application = new Application();
-	$application->add(new CheckStatusCommand());
-	return $application;
-};
-
 // setup random factory
-$container['RandomFactory'] = function() {
-	
+$container['randomFactory'] = function() {
 	$randomFactory = new RandomFactory;
 	return $randomFactory->getGenerator(new Strength(Strength::MEDIUM));
 };
 
 // setup app logger
 $container['logger'] = function($container) {
-	$logger = new Logger('Kore');
+	$logger = new Logger('AllOk');
 	$containerarbon = new Carbon;
 	$formatter = new LineFormatter(null, null, false, true);
 	$handler = new StreamHandler(getBaseDirectory() . "/logs/" . $containerarbon->today()->format('m-d-y') . "-app.log");
@@ -59,6 +55,23 @@ $container['emailEngine'] = function($container) {
 		getenv('MAILGUN_FROM'),
 		$container->emailEngineLogger
 	);
+};
+
+// setup texting engine
+$container['textingEngine'] = function() {
+	return new TextingEngine(
+		getenv('TWILIO_SID'),
+		getenv('TWILIO_TOKEN'),
+		getenv('TWILIO_FROM')
+	);
+};
+
+// setup CLI console
+$container['console'] = function($container) {
+	$application = new Application();
+	$application->add(new CheckStatusCommand());
+	$application->add(new TestText($container->textingEngine));
+	return $application;
 };
 
 // setup assembly environment
